@@ -169,6 +169,40 @@ test('session created with the preset as default seeds on its first permission e
   }
 })
 
+test('default-preset seeding synchronizes an agent published while skills are loading', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'dsh-prefab-born-race-'))
+  try {
+    const handlers = new Map()
+    let publishSkills
+    const skillsReady = new Promise((resolve) => { publishSkills = resolve })
+    let agent
+    const ctx = {
+      on(type, callback) { handlers.set(type, callback) },
+      get(service) {
+        if (service === 'agents') return { get() { return agent } }
+        if (service === 'skills') return { async list() { await skillsReady; return [] } }
+        return undefined
+      },
+      logger: { error(error) { throw new Error(error) } },
+    }
+    const session = fakeSession(dir)
+    session.header.agentPreset = 'prefab-anchored-standard'
+    apply(ctx, { templatePath: fixture(dir) })
+    session.listener = handlers.get('session/event')
+
+    session.append('permission/preset', { preset: 'workspace-write' })
+    await Promise.resolve()
+    agent = { session, status: 'idle', phase: { kind: 'idle', lastTurn: 0 } }
+    publishSkills()
+    await settle()
+
+    assert.equal(agent.phase.lastTurn, 1, 'late-published agent must see the seeded turn')
+    assert.equal(agent.phase.lastTurn + 1, 2)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('session with a different preset header ignores permission events', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'dsh-prefab-born-other-'))
   try {

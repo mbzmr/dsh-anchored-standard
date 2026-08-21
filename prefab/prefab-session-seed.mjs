@@ -492,7 +492,11 @@ export function apply(ctx, config = {}) {
             ? buildSeedPlan(template, cwd, agentsMd, skillResults)
             : preliminary
           if (seedSession(session, plan, title)) {
-            if (agent !== undefined) synchronizeAgentTurnCursor(agent, session)
+            // The default-preset path may publish its agent while the skill
+            // registry is being queried. Re-read after the await so an agent
+            // created in that window receives the seeded turn cursor.
+            const currentAgent = ctx.get('agents')?.get(session.id)
+            if (currentAgent !== undefined) synchronizeAgentTurnCursor(currentAgent, session)
           }
         } catch (error) {
           ctx.logger?.error?.(`${name}: failed to seed session ${session.id}: ${String(error?.stack ?? error)}`)
