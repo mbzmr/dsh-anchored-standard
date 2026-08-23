@@ -69,8 +69,9 @@ test('after promotion ONE hint is injected once per session', async () => {
 
 test('a process restart does not re-inject: the guard is durable', async () => {
   // A fresh plugin instance (new process) over a session log that already
-  // carries one hint message — the same deterministic id twice would break
-  // history replay.
+  // carries one hint message. The durable scan is prevention; per-injection
+  // unique ids are the tolerance layer that would keep history replay alive
+  // even if the scan ran before the log was materialized.
   const { listeners } = register()
   const agent = { session: session([
     { type: 'assistant/message', seq: 1, data: {} },

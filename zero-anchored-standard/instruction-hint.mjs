@@ -16,12 +16,16 @@
  *      - project chain: AGENTS.md / CLAUDE.md / AGENTS.local.md / CLAUDE.local.md
  *        walking up from the session cwd to the project root (a directory
  *        containing `.git`, or the cwd itself).
- *  - The hint is ONCE PER SESSION, DERIVED FROM DURABLE EVENTS: the guard
- *    scans the session log for an existing `instruction-hint` message (then
- *    O(1)), so a process restart — whose in-memory state starts empty —
- *    cannot inject a second copy. A duplicate would collide with the first
- *    message's deterministic id (`instruction-hint-<sessionId>`) and break
- *    history replay.
+ *  - The hint is intended ONCE PER SESSION, DERIVED FROM DURABLE EVENTS: the
+ *    guard scans the session log for an existing `instruction-hint` message
+ *    (then O(1)), so a process restart — whose in-memory state starts empty —
+ *    cannot inject a second copy. The scan is prevention, not a guarantee: if
+ *    it runs before the session log is materialized after a host restart it
+ *    sees an empty event list and re-injects. Each message therefore also
+ *    carries a UNIQUE id (`instruction-hint-<sessionId>-<randomUUID>`), which
+ *    turns a past or future re-injection into a few wasted context tokens
+ *    instead of a broken history replay — the old deterministic id would
+ *    collide with the first copy and stop history assembly entirely.
  *  - The hint tells the model the files exist so it can read them before
  *    acting when relevant, without embedding their content.
  *  - WORDING (issue #49): the hint text is deliberately NON-IMPERATIVE.
@@ -48,6 +52,7 @@
  * only while the session is unpromoted (never the intended path).
  */
 
+import { randomUUID } from 'node:crypto'
 import { createEpochPromotion } from './compaction-epoch.mjs'
 
 /** Cordis plugin name used by loader diagnostics. */
@@ -239,7 +244,7 @@ export function apply(ctx, config) {
       return {
         ...decision,
         messages: [...decision.messages, {
-          id: `instruction-hint-${session.id}`,
+          id: `instruction-hint-${session.id}-${randomUUID()}`,
           role: 'user',
           content: [{ type: 'text', text }],
           source: { kind: 'instruction-hint', form: 'hint' },
