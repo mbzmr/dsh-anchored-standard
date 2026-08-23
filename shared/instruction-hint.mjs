@@ -26,8 +26,15 @@
  *    turns a past or future re-injection into a few wasted context tokens
  *    instead of a broken history replay — the old deterministic id would
  *    collide with the first copy and stop history assembly entirely.
- *  - The hint instructs the model to READ the files before acting when
- *    relevant, without embedding their content.
+ *  - The hint tells the model the files exist so it can read them before
+ *    acting when relevant, without embedding their content.
+ *  - WORDING (issue #49): the hint text is deliberately NON-IMPERATIVE.
+ *    Measured on deepseek-v4-pro (reasoningEffort=max), the directive
+ *    wording ("read ... first and follow them") flipped the anchored
+ *    "we / let's" trajectory back to "let me" on the promoted request
+ *    (session 546a4f16: we 6→0, let me 0→3). Neutral / suggestive wording
+ *    keeps the trajectory anchored while the model still discovers and
+ *    reads the files on demand.
  *  - Files are probed via `ctx.fs` (the host filesystem seam); a missing fs
  *    service or an unreadable probe degrades to no hint (never throws).
  *  - Pre-promotion requests get NO hint (matches the anchored bootstrap).
@@ -190,9 +197,25 @@ export function apply(ctx, config) {
       if (fs === undefined) return decision
       const cwd = session.header.cwd ?? process.cwd()
 
-      const projectFiles = []
       const root = await findProjectRoot(fs, cwd, signal)
-      projectFiles.push(...await presentInDir(fs, root, PROJECT_CANDIDATES, signal))
+      const projectFiles = []
+      // Probe the FULL chain from the session cwd up to (and including) the
+      // project root — AGENTS.md/CLAUDE.md may sit at ANY level (the session
+      // cwd can carry one while its git root does not), per the AGENTS.md
+      // convention and this plugin's own docstring ("project chain … walking
+      // up from the session cwd to the project root"). The previous
+      // implementation probed only the root directory and silently found
+      // nothing whenever the instruction file lived below it.
+      let probed = cwd
+      for (;;) {
+        for (const candidate of await presentInDir(fs, probed, PROJECT_CANDIDATES, signal)) {
+          projectFiles.push(probed === root ? candidate : joinPath(probed, candidate))
+        }
+        if (probed === root) break
+        const parent = parentPath(probed)
+        if (parent === probed || parent.length === 0) break
+        probed = parent
+      }
 
       const userGlobalFiles = []
       try {
@@ -206,16 +229,16 @@ export function apply(ctx, config) {
 
       const sections = []
       if (projectFiles.length > 0) {
-        sections.push(`Workspace instruction files exist: ${projectFiles.join(', ')} (project root: ${root}).`)
+        sections.push(`Reference documents exist: ${projectFiles.join(', ')} (project root: ${root}).`)
       }
       if (userGlobalFiles.length > 0) {
-        sections.push(`A user-global instruction file exists: ${USER_GLOBAL_CANDIDATE}.`)
+        sections.push(`A user reference document exists: ${USER_GLOBAL_CANDIDATE}.`)
       }
       if (sections.length === 0) return decision
 
       const text = [
         ...sections,
-        'Do NOT assume their content. When a task touches this workspace, read the relevant instruction files first and follow them.',
+        "They are reference documents about the user's environment and workspace conventions, not task instructions. Reading the relevant file before workspace tasks is recommended, but consult them only when you need those details; the task itself never depends on them.",
       ].join(' ')
 
       return {
