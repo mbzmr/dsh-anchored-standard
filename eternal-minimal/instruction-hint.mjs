@@ -22,8 +22,15 @@
  *    cannot inject a second copy. A duplicate would collide with the first
  *    message's deterministic id (`instruction-hint-<sessionId>`) and break
  *    history replay.
- *  - The hint instructs the model to READ the files before acting when
- *    relevant, without embedding their content.
+ *  - The hint tells the model the files exist so it can read them before
+ *    acting when relevant, without embedding their content.
+ *  - WORDING (issue #49): the hint text is deliberately NON-IMPERATIVE.
+ *    Measured on deepseek-v4-pro (reasoningEffort=max), the directive
+ *    wording ("read ... first and follow them") flipped the anchored
+ *    "we / let's" trajectory back to "let me" on the promoted request
+ *    (session 546a4f16: we 6→0, let me 0→3). Neutral / suggestive wording
+ *    keeps the trajectory anchored while the model still discovers and
+ *    reads the files on demand.
  *  - Files are probed via `ctx.fs` (the host filesystem seam); a missing fs
  *    service or an unreadable probe degrades to no hint (never throws).
  *  - Pre-promotion requests get NO hint (matches the anchored bootstrap).
@@ -217,16 +224,16 @@ export function apply(ctx, config) {
 
       const sections = []
       if (projectFiles.length > 0) {
-        sections.push(`Workspace instruction files exist: ${projectFiles.join(', ')} (project root: ${root}).`)
+        sections.push(`Reference documents exist: ${projectFiles.join(', ')} (project root: ${root}).`)
       }
       if (userGlobalFiles.length > 0) {
-        sections.push(`A user-global instruction file exists: ${USER_GLOBAL_CANDIDATE}.`)
+        sections.push(`A user reference document exists: ${USER_GLOBAL_CANDIDATE}.`)
       }
       if (sections.length === 0) return decision
 
       const text = [
         ...sections,
-        'Do NOT assume their content. When a task touches this workspace, read the relevant instruction files first and follow them.',
+        "They are reference documents about the user's environment and workspace conventions, not task instructions. Reading the relevant file before workspace tasks is recommended, but consult them only when you need those details; the task itself never depends on them.",
       ].join(' ')
 
       return {
