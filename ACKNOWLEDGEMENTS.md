@@ -26,6 +26,8 @@
 - [@DuduluTkmttt](https://github.com/DuduluTkmttt)——定位 rc.6 上 dev_tool_search 因注册表作用域变化而失效的问题（[#32](https://github.com/xiaobright/dsh-anchored-standard/issues/32)、[#31](https://github.com/xiaobright/dsh-anchored-standard/pull/31)，修复随 a2e7d6a 落地）。
 - [@HongzhongL](https://github.com/HongzhongL)——贡献 fork-safe 目录控制与 Windows Git Bash 套件（[#34](https://github.com/xiaobright/dsh-anchored-standard/pull/34)；Windows 部分先后经 [#33](https://github.com/xiaobright/dsh-anchored-standard/pull/33)、[#44](https://github.com/xiaobright/dsh-anchored-standard/pull/44)、[#72](https://github.com/xiaobright/dsh-anchored-standard/pull/72) 落地）。
 - [@hongshuxifan321](https://github.com/hongshuxifan321)——复现 instruction-hint 跨重启重复注入与确定性 id 碰撞，给出唯一 id 容错修复、日志清理配方与排障文档（[#76](https://github.com/xiaobright/dsh-anchored-standard/issues/76)、[#79](https://github.com/xiaobright/dsh-anchored-standard/pull/79)）。
+- [@UraraO](https://github.com/UraraO)——修复默认 preset 直接创建的会话跳过轨迹预填充的问题，以 `permission/preset` 作为 born 路径的可靠触发点并堵上 await 后的 agent 竞态（[#77](https://github.com/xiaobright/dsh-anchored-standard/pull/77)）。
+- [@gwL955](https://github.com/gwL955)——以真实会话日志定位 dev_tool_search 全 token AND 匹配导致长查询必然空结果、模型只搜不解锁的双重缺陷，给出模糊打分排序与解锁路径教学的修复及回归测试（[#80](https://github.com/xiaobright/dsh-anchored-standard/pull/80)，在 [#31](https://github.com/xiaobright/dsh-anchored-standard/pull/31)、[#32](https://github.com/xiaobright/dsh-anchored-standard/issues/32) 的基础上推进）。
 
 ## 研究与独立复现
 
@@ -39,4 +41,4 @@
 
 完整记录可在 [Contributors](https://github.com/xiaobright/dsh-anchored-standard/graphs/contributors)、[Pull Requests](https://github.com/xiaobright/dsh-anchored-standard/pulls?q=is%3Apr) 和 [Issues](https://github.com/xiaobright/dsh-anchored-standard/issues?q=is%3Aissue) 中查阅；实验材料与研究贡献见 [DeepseekCotexplorations](https://github.com/0liveiraaa/DeepseekCotexplorations)。
 
-> 统计截至 2026-08-24：主仓库共有 22 个已合并 PR，其中包括 14 位外部 PR 作者；此外还有通过协作分支、审查合并和研究仓库参与项目的贡献者。GitHub 账号与本地 Git 作者邮箱的映射可能造成贡献计数差异，因此这里以可核验的实际贡献内容为主，而不是按 commit 数量排序。
+> 统计截至 2026-08-26：主仓库共有 24 个已合并 PR，其中包括 16 位外部 PR 作者；此外还有通过协作分支、审查合并和研究仓库参与项目的贡献者。GitHub 账号与本地 Git 作者邮箱的映射可能造成贡献计数差异，因此这里以可核验的实际贡献内容为主，而不是按 commit 数量排序。
